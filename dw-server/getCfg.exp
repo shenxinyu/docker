@@ -1,0 +1,27 @@
+#!/usr/bin/expect
+
+set username [lindex $argv 0]
+set password [lindex $argv 1]
+set rpath [lindex $argv 2]
+set lpath [lindex $argv 3]
+
+set timeout 300
+spawn scp $username@dw-integration.socialgamenet.com:$rpath/Version.json .
+expect {
+"yes/no" {send "yes\r"}
+"*assword" {send "$password\r"}
+}
+expect 100%
+expect eof
+set ver [exec sh -c {cat Version.json | cut -d'"' -f2}]
+
+spawn ssh $username@dw-integration.socialgamenet.com "cd $rpath;sudo tar -zcf $ver.tar.gz $ver"
+expect "*password"
+send "$password\r"
+expect eof
+
+spawn scp -r $username@dw-integration.socialgamenet.com:$rpath/$ver.tar.gz $lpath/
+expect "*password"
+send "$password\r"
+expect 100%
+expect eof

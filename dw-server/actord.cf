@@ -1,0 +1,100 @@
+{
+    http_api_listen_addr: ":9898"
+    stats_listen_addr: "127.0.0.1:9010"
+    prof_listen_addr: "127.0.0.1:9011"
+    metrics_logfile: "/sgn/log/dw/metrics.log"
+    stats_interval: "10m"
+
+    // scheduler
+    sched_backlog: 50000
+
+    poller: {
+        beanstalk: {
+            breaker: {
+                failure_allowance: 5
+                retry_timeout: "10s"
+            }
+
+            servers: [
+                {
+                    tube: "war"
+                    server: "127.0.0.1:11300"
+                }
+                {
+                    tube: "user"
+                    server: "127.0.0.1:11300"
+                }
+                {
+                    tube: "mail"
+                    server: "127.0.0.1:11300"
+                }
+                {
+                    tube: "alliance"
+                    server: "127.0.0.1:11300"
+                }
+            ]
+        }
+
+        mysql: {
+            connect_timeout: "4s"
+            slow_threshold: "1s"
+            interval: "1s"
+            many_wakeups_threshold: 300
+
+            breaker: {
+                failure_allowance: 5
+                retry_timeout: "10s"
+            }
+
+            query: {
+                job: "SELECT DISTINCT uid FROM Job WHERE unix_timestamp(time_end)<=?"
+                march: "SELECT uid,march_id,opp_uid,world_id,end_x,end_y,type,state,end_time FROM March WHERE state!='done' AND unix_timestamp(end_time)<=? ORDER BY end_time ASC, end_x, end_y"
+            }
+
+            servers: [
+                {
+                    pool: "UserShard1"
+                    host: "127.0.0.1"
+                    port: 3306
+                    username: "hellofarm"
+                    password: "halfquestfarm4321"
+                    db: "UserShard1"
+                }
+            ]
+        }
+    }
+
+    worker: {
+        php: {
+            dry_run: false
+            timeout: "5s"
+            debug_locking: false
+            max_flight_entries: 100000
+            job: "http://127.0.0.1/api/?class=actor&method=wakeAll&params=%s"
+            march: "http://127.0.0.1/api/?class=actor&method=play&params=%s"
+        }
+
+        rtm: {
+            max_procs: 200
+            backlog: 500
+            max_retries: 5
+            primary_hosts: ["dispatch.test.rtm.infra.funplus.net:13031"]
+            backup_hosts: []
+            project_id: 10001,
+            secret_key: "test_key",
+        }
+    }
+
+    locker: {
+        expire_time: "8s"
+        max_retries: 3
+        retry_delay: "512ms"
+        drift_fator: 0.01
+        redis_servers: [
+            "127.0.0.1:6379",
+        ]
+    }
+
+    crontab: {
+    }
+}
